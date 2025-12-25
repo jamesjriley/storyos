@@ -24,3 +24,19 @@ storyos ingest extract examples/demo_project ./examples/demo_project/00_INGEST/i
 ```
 
 Outputs go to `00_INGEST/proposals/<run_id>/` (world, timeline, characters) plus `raw_llm_output.txt` for audit.
+
+## OpenAI adapter
+
+Set your API key in the environment:
+
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
+Quick check:
+
+```bash
+storyos doctor
+```
+
+Ingest uses the OpenAI adapter by default.

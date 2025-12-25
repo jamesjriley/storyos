@@ -60,5 +60,25 @@ def init(
     console.print(f"[bold green]Created.[/bold green] {target_dir}")
 
 
+
+@app.command()
+def doctor():
+    """Quick environment sanity checks."""
+    import os
+    has_key = bool(os.getenv("OPENAI_API_KEY"))
+    console.print(f"OPENAI_API_KEY set: {'yes' if has_key else 'no'}")
+    if not has_key:
+        raise typer.Exit(code=2)
+    try:
+        from storyos.llm.openai_adapter import OpenAIAdapter
+        from storyos.llm.base import LLMMessage
+        a = OpenAIAdapter()
+        r = a.generate([LLMMessage(role="user", content="Say 'ok'")], model="gpt-4.1-mini", temperature=0)
+        console.print(f"OpenAI call: {r.text.strip()}")
+    except Exception as e:
+        console.print(f"[bold red]OpenAI call failed:[/bold red] {e}")
+        raise typer.Exit(code=3)
+
+
 if __name__ == "__main__":
     app()

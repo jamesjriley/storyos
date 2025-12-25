@@ -8,7 +8,7 @@ from typing import List
 from storyos.config import load_project_config
 from storyos.core.workspace import Workspace
 from storyos.llm.base import LLMMessage
-from storyos.llm.openai_adapter_stub import OpenAIAdapterStub
+from storyos.llm.openai_adapter import OpenAIAdapter
 from storyos.ingest.chunking import chunk_by_lines
 from storyos.ingest.schemas import ExtractorOutput
 from storyos.ingest.templates import render_character_md, render_world_md, render_timeline_md
@@ -51,7 +51,7 @@ def extract_to_proposals(*, project_dir: str, input_path: str, max_lines_per_chu
     filename = in_path.name
     chunk_text = "\n\n".join([f"## {c.id} [{c.span.ref(filename)}]\n{c.text}" for c in chunks])
 
-    llm = OpenAIAdapterStub()
+    llm = OpenAIAdapter()
     messages: List[LLMMessage] = [
         LLMMessage(role="system", content=EXTRACTOR_SYSTEM),
         LLMMessage(role="user", content=f"INPUT FILE: {filename}\n\n{chunk_text}"),
