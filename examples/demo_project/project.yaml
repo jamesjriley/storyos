@@ -1,0 +1,42 @@
+project:
+  name: "Demo Story"
+  version: "0.1"
+  default_pov: "third_tight"
+  target_beat_words: 950
+
+security:
+  allow_cloud_models: true
+  allowed_workspace_roots:
+    - "."
+  max_file_read_kb: 256
+  max_file_write_kb: 512
+
+llm:
+  provider: "openai"
+  model: "gpt-4.1-mini"
+  temperature: 0.8
+
+workflow:
+  steps:
+    - load_context
+    - retrieve_canon
+    - plan_beat
+    - draft_beat
+    - continuity_check
+    - voice_pass
+    - user_review_gate
+    - write_outputs
+    - write_runlog
+
+plugins:
+  enabled:
+    agents:
+      - "builtin.planner"
+      - "builtin.writer"
+      - "builtin.continuity"
+      - "builtin.voice"
+      - "builtin.librarian"
+    checks:
+      - "builtin.continuity_rules"
+    exporters:
+      - "builtin.markdown_exporter"
