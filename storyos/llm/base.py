@@ -15,3 +15,17 @@ class LLMResult:
 class LLMClient(Protocol):
     def generate(self, messages: List[LLMMessage], *, model: str, temperature: float) -> LLMResult:
         ...
+
+# --- Added: explicit adapter interface (Protocol) ---
+from typing import Protocol, List
+
+class LLMAdapter(Protocol):
+    def generate(
+        self,
+        messages: List["LLMMessage"],
+        *,
+        model: str,
+        temperature: float = 0.2,
+        max_output_tokens: int = 2000,
+    ) -> "LLMResult":
+        ...

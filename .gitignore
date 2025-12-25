@@ -1,5 +1,24 @@
 .venv/
-__pycache__/
 *.pyc
-.DS_Store
 .env
+
+# Python build artefacts
+*.egg-info/
+__pycache__/
+.pytest_cache/
+
+# Virtualenv
+.venv/
+
+# Ingest outputs (generated)
+examples/**/00_INGEST/proposals/
+examples/**/00_INGEST/runs/
+
+# Local test inputs
+examples/**/00_INGEST/inputs/*.txt
+
+# Local eval scratch
+evals/
+
+# OS junk
+.DS_Store
