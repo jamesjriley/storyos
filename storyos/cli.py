@@ -8,6 +8,9 @@ from storyos.workflow.engine import WorkflowEngine
 from storyos.config import load_project_config
 
 app = typer.Typer(add_completion=False)
+
+ingest_app = typer.Typer(add_completion=False)
+app.add_typer(ingest_app, name="ingest")
 console = Console()
 
 
@@ -28,6 +31,24 @@ def run(
     console.print(f"Draft: {result.outputs.get('draft_path', '(none)')}")
     console.print(f"Run log: {result.outputs.get('runlog_path', '(none)')}")
 
+
+@ingest_app.command("extract")
+def ingest_extract(
+    project_dir: str = typer.Argument(..., help="Path to an MPF project folder"),
+    input_path: str = typer.Argument(..., help="Path to a text/markdown file to ingest"),
+    max_lines: int = typer.Option(80, help="Max lines per chunk"),
+    overlap: int = typer.Option(10, help="Overlap lines between chunks"),
+):
+    """Extract proposals (world/timeline/characters) into 00_INGEST/proposals/<run_id>/."""
+    from storyos.ingest.extract import extract_to_proposals
+    result = extract_to_proposals(
+        project_dir=project_dir,
+        input_path=input_path,
+        max_lines_per_chunk=max_lines,
+        overlap=overlap,
+    )
+    console.print(f"[bold green]Extracted proposals.[/bold green] Run id: {result.run_id}")
+    console.print(f"Proposals: {result.proposals_dir}")
 
 @app.command()
 def init(

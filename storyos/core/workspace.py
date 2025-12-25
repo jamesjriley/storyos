@@ -23,7 +23,7 @@ class Workspace:
         root = Path(target_dir)
         root.mkdir(parents=True, exist_ok=True)
 
-        for d in ["01_CANON","02_CHARACTERS","03_OUTLINES","04_DRAFTS","05_RUNS","06_EXPORTS"]:
+        for d in ["00_INGEST/inputs","00_INGEST/proposals","01_CANON","02_CHARACTERS","03_OUTLINES","04_DRAFTS","05_RUNS","06_EXPORTS"]:
             (root/d).mkdir(exist_ok=True)
 
         (root / "project.yaml").write_text(
@@ -74,7 +74,7 @@ plugins:
         )
 
         (root / "00_README.md").write_text(
-            "# StoryOS Project\n\nThis is a human-readable MPF workspace.\n",
+            "# StoryOS Project\n\nThis is a human-readable MPF workspace.\n\n## Ingest\n\n- Put raw text into 00_INGEST/inputs/ and run `storyos ingest extract`.\n",
             encoding="utf-8",
         )
 
