@@ -55,7 +55,7 @@ class OpenAIAdapter(LLMAdapter):
         max_output_tokens: int = 2000,
     ) -> LLMResult:
         input_msgs = [
-            {"role": m.role, "content": [{"type": "text", "text": m.content}]}
+            {"role": m.role, "content": [{"type": "input_text", "text": m.content}]}
             for m in messages
         ]
 
@@ -75,4 +75,4 @@ class OpenAIAdapter(LLMAdapter):
                         parts.append(getattr(c, "text", ""))
             text = "\n".join([p for p in parts if p]).strip()
 
-        return LLMResult(text=text or "")
+        return LLMResult(text=text or "", raw=getattr(resp, "model_dump", lambda: resp)())
