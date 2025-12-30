@@ -2,7 +2,7 @@ name: ingest_v1
 description: "Ingest extraction prompt pack for StoryOS"
 defaults:
   temperature: 0.2
-  max_output_tokens: 2500
+  max_output_tokens: 20000
 pipelines:
   ingest_extract:
     guardrails:

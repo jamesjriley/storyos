@@ -1,74 +1,111 @@
 {
-  "type":"object",
-  "required":["characters","world","timeline"],
-  "properties":{
-    "characters":{
-      "type":"array",
-      "items":{
-        "type":"object",
-        "required":["name","facts","open_questions"],
-        "properties":{
-          "name":{"type":"string"},
-          "facts":{
-            "type":"array",
-            "items":{
-              "type":"object",
-              "required":["claim","confidence","evidence"],
-              "properties":{
-                "claim":{"type":"string"},
-                "confidence":{"type":"string","enum":["high","med","low"]},
-                "evidence":{
-                  "type":"array",
-                  "items":{
-                    "type":"object",
-                    "required":["source","note"],
-                    "properties":{
-                      "source":{"type":"string"},
-                      "note":{"type":"string"}
-                    }
-                  }
-                }
-              }
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "chunk_id": { "type": "string" }
+      },
+      "required": ["title", "chunk_id"]
+    },
+    "characters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["human", "animal", "other", "unknown"]
+          },
+          "role": {
+            "type": "string",
+            "enum": ["protagonist", "supporting", "minor", "unknown"]
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "text": { "type": "string" },
+                "evidence": { "type": "string" },
+                "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+              },
+              "required": ["text", "evidence", "confidence"]
             }
           },
-          "open_questions":{
-            "type":"array",
-            "items":{
-              "type":"object",
-              "required":["question","evidence"],
-              "properties":{
-                "question":{"type":"string"},
-                "evidence":{
-                  "type":"array",
-                  "items":{
-                    "type":"object",
-                    "required":["source","note"],
-                    "properties":{
-                      "source":{"type":"string"},
-                      "note":{"type":"string"}
-                    }
-                  }
-                }
-              }
+          "traits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "trait": { "type": "string" },
+                "evidence": { "type": "string" },
+                "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+              },
+              "required": ["trait", "evidence", "confidence"]
             }
+          },
+          "relationships": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "with": { "type": "string" },
+                "relation": { "type": "string" },
+                "evidence": { "type": "string" },
+                "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+              },
+              "required": ["with", "relation", "evidence", "confidence"]
+            }
+          },
+          "open_questions": {
+            "type": "array",
+            "items": { "type": "string" }
           }
-        }
+        },
+        "required": ["name", "facts", "traits", "relationships", "open_questions"]
       }
     },
-    "world":{
-      "type":"object",
-      "required":["facts","open_questions"],
-      "properties":{
-        "facts":{"type":"array"},
-        "open_questions":{"type":"array"}
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "kind": { "type": "string", "enum": ["place", "object", "organisation", "concept", "unknown"] },
+          "description": { "type": "string" },
+          "evidence": { "type": "string" },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+        },
+        "required": ["name", "kind", "description", "evidence", "confidence"]
       }
     },
-    "timeline":{
-      "type":"object",
-      "required":["events"],
-      "properties":{
-        "events":{"type":"array"}
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "summary": { "type": "string" },
+          "participants": { "type": "array", "items": { "type": "string" } },
+          "entities": { "type": "array", "items": { "type": "string" } },
+          "location": { "type": "string" },
+          "evidence": { "type": "string" },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+        },
+        "required": ["summary", "participants", "entities", "location", "evidence", "confidence"]
       }
     }
-  }
+  },
+  "required": ["source", "characters", "entities", "events"]
 }
+
