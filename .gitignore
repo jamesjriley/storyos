@@ -10,6 +10,9 @@ __pycache__/
 # Virtualenv
 .venv/
 
+# Local ingest inputs
+examples/**/00_INGEST/inputs/*
+
 # Ingest outputs (generated)
 examples/**/00_INGEST/proposals/
 examples/**/00_INGEST/runs/

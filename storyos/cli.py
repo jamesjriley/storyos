@@ -50,6 +50,29 @@ def ingest_extract(
     console.print(f"[bold green]Extracted proposals.[/bold green] Run id: {result.run_id}")
     console.print(f"Proposals: {result.proposals_dir}")
 
+@ingest_app.command("approve")
+def ingest_approve(
+    project_dir: str = typer.Argument(..., help="Path to a StoryOS project folder"),
+    run_id: str = typer.Argument(..., help="Run id under 00_INGEST/proposals/<run_id>"),
+    dry_run: bool = typer.Option(False, help="Preview changes without writing"),
+    archive: bool = typer.Option(True, help="Move approved proposals to 00_INGEST/approved/<run_id>"),
+):
+    # Import inside to keep CLI import-time light.
+    from storyos.ingest.approve import approve_run_to_canon
+
+    result = approve_run_to_canon(
+        project_dir=project_dir,
+        run_id=run_id,
+        dry_run=dry_run,
+        archive=archive,
+    )
+    console.print("✅ Approved ingest run")
+    console.print(f"  Run: {run_id}")
+    console.print(f"  Report: {getattr(result, 'report_path', None)}")
+    if dry_run:
+        console.print("  (dry-run: nothing was written)")
+
+
 @app.command()
 def init(
     target_dir: str = typer.Argument(..., help="Where to create a new MPF project"),
