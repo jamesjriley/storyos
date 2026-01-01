@@ -33,10 +33,7 @@ class OpenAIAdapter(LLMAdapter):
         base_url = os.getenv(self.cfg.base_url_env)
         org = os.getenv(self.cfg.organization_env)
 
-        try:
-            from openai import OpenAI  # type: ignore
-        except Exception as e:
-            raise RuntimeError("OpenAI SDK not installed. Run: pip install openai") from e
+        from openai import OpenAI  # type: ignore
 
         kwargs = {"api_key": api_key}
         if base_url:
@@ -59,20 +56,32 @@ class OpenAIAdapter(LLMAdapter):
             for m in messages
         ]
 
-        resp = self.client.responses.create(
-            model=model,
-            input=input_msgs,
-            temperature=temperature,
-            max_output_tokens=max_output_tokens,
-        )
+        if hasattr(self.client, "responses"):
+            resp = self.client.responses.create(
+                model=model,
+                input=input_msgs,
+                temperature=temperature,
+                max_output_tokens=max_output_tokens,
+            )
+            text = getattr(resp, "output_text", None)
+            if not text:
+                parts: list[str] = []
+                for o in (getattr(resp, "output", None) or []):
+                    for c in (getattr(o, "content", None) or []):
+                        if getattr(c, "type", None) == "output_text":
+                            parts.append(getattr(c, "text", ""))
+                text = "\n".join([p for p in parts if p]).strip()
+            raw = getattr(resp, "model_dump", lambda: resp)()
+        else:
+            resp = self.client.chat.completions.create(
+                model=model,
+                messages=[{"role": m.role, "content": m.content} for m in messages],
+                temperature=temperature,
+                max_tokens=max_output_tokens,
+            )
+            text = ""
+            if getattr(resp, "choices", None):
+                text = (resp.choices[0].message.content or "").strip()
+            raw = getattr(resp, "model_dump", lambda: resp)()
 
-        text = getattr(resp, "output_text", None)
-        if not text:
-            parts: list[str] = []
-            for o in (getattr(resp, "output", None) or []):
-                for c in (getattr(o, "content", None) or []):
-                    if getattr(c, "type", None) == "output_text":
-                        parts.append(getattr(c, "text", ""))
-            text = "\n".join([p for p in parts if p]).strip()
-
-        return LLMResult(text=text or "", raw=getattr(resp, "model_dump", lambda: resp)())
+        return LLMResult(text=text or "", raw=raw)

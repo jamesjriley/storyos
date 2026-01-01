@@ -44,6 +44,7 @@ def safe_slug(text: str) -> str:
 class ApprovalResult:
     run_id: str
     approved_dir: Path
+    report_path: Path
     world_facts_added: int
     timeline_events_added: int
     characters_touched: int
@@ -281,6 +282,7 @@ def approve_proposals(
     return ApprovalResult(
         run_id=run_id,
         approved_dir=approved_dir,
+        report_path=(approved_dir / "APPROVAL_REPORT.md"),
         world_facts_added=len([l for l in world_lines if l.startswith("- ")]),
         timeline_events_added=len([l for l in tl_lines if l.startswith("- ")]),
         characters_touched=chars_touched,
@@ -339,7 +341,6 @@ def approve_proposals_run(
     archive: bool = True,
     dedupe: bool = True,
 ) -> ApprovalResult:
-    dedupe = True
     """Approve an ingest proposals run and merge into canon.
 
     Inputs
@@ -377,12 +378,21 @@ def approve_proposals_run(
     canon_chars_dir.mkdir(parents=True, exist_ok=True)
 
     approved_dir = project_dir / "00_INGEST" / "approved" / run_id
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+    def _as_diff_lines(lines: List[str]) -> List[str]:
+        diffed = []
+        for line in lines:
+            text = line[2:] if line.startswith("- ") else line.lstrip()
+            diffed.append(f"+ {text}")
+        return diffed
 
     # --- gather world facts ---
     world_obj = (data.get("world") or {})
     world_facts = _ensure_list(world_obj.get("facts"))
 
     world_lines: List[str] = []
+    world_skipped: List[str] = []
     existing_world = _read_existing_claims(canon_world) if dedupe else set()
     for f in world_facts:
         if not isinstance(f, dict):
@@ -390,15 +400,18 @@ def approve_proposals_run(
         claim = (f.get("claim") or "").strip()
         if not claim:
             continue
+        rendered = _format_fact_line(claim, f.get("confidence"))
         if dedupe and claim in existing_world:
+            world_skipped.append(rendered)
             continue
-        world_lines.append(_format_fact_line(claim, f.get("confidence")))
+        world_lines.append(rendered)
 
     # --- gather timeline events ---
     tl_obj = (data.get("timeline") or {})
     events = _ensure_list(tl_obj.get("events"))
 
     tl_lines: List[str] = []
+    tl_skipped: List[str] = []
     existing_tl = _read_existing_claims(canon_timeline) if dedupe else set()
     for ev in events:
         if not isinstance(ev, dict):
@@ -409,15 +422,19 @@ def approve_proposals_run(
             continue
         # dedupe uses the full rendered line without confidence
         dedupe_key = f"{when}: {what}" if when else what
+        rendered = _format_event_line(when, what, ev.get("confidence"))
         if dedupe and dedupe_key in existing_tl:
+            tl_skipped.append(rendered)
             continue
-        tl_lines.append(_format_event_line(when, what, ev.get("confidence")))
+        tl_lines.append(rendered)
 
     # --- gather character facts ---
     characters = _ensure_list(data.get("characters"))
     chars_touched = 0
     char_facts_added = 0
     char_blocks: List[Tuple[str, List[str]]] = []
+    char_questions: Dict[str, List[str]] = {}
+    char_skipped: Dict[str, List[str]] = {}
 
     for c in characters:
         if not isinstance(c, dict):
@@ -426,7 +443,8 @@ def approve_proposals_run(
         if not name:
             continue
         facts = _ensure_list(c.get("facts"))
-        if not facts:
+        questions = _ensure_list(c.get("open_questions"))
+        if not facts and not questions:
             continue
 
         md_path = canon_chars_dir / f"{safe_slug(name)}.md"
@@ -439,9 +457,21 @@ def approve_proposals_run(
             claim = (f.get("claim") or "").strip()
             if not claim:
                 continue
+            rendered = _format_fact_line(claim, f.get("confidence"))
             if dedupe and claim in existing:
+                char_skipped.setdefault(name, []).append(rendered)
                 continue
-            lines.append(_format_fact_line(claim, f.get("confidence")))
+            lines.append(rendered)
+
+        question_lines: List[str] = []
+        for q in questions:
+            if not isinstance(q, dict):
+                continue
+            question = (q.get("question") or "").strip()
+            if question:
+                question_lines.append(question)
+        if question_lines:
+            char_questions[name] = question_lines
 
         if lines:
             chars_touched += 1
@@ -469,25 +499,54 @@ def approve_proposals_run(
         report_lines: List[str] = [
             f"# Approval report: {run_id}",
             "",
+            f"Approved at: {stamp}",
             f"Project: {project_dir.resolve()}",
             "",
             "## Summary",
             f"- World facts added: {len(world_lines)}",
+            f"- World facts skipped (duplicate): {len(world_skipped)}",
             f"- Timeline events added: {len(tl_lines)}",
+            f"- Timeline events skipped (duplicate): {len(tl_skipped)}",
             f"- Characters touched: {chars_touched}",
             f"- Character facts added: {char_facts_added}",
             "",
-            "## Details",
+            "## World facts added",
         ]
 
         if world_lines:
-            report_lines += ["### World", ""] + world_lines + [""]
+            report_lines += [""] + _as_diff_lines(world_lines) + [""]
+        else:
+            report_lines += ["", "+ (none)", ""]
+        if world_skipped:
+            report_lines += ["### World (skipped duplicates)", ""] + world_skipped + [""]
+        report_lines += ["## Timeline events added", ""]
         if tl_lines:
-            report_lines += ["### Timeline", ""] + tl_lines + [""]
+            report_lines += _as_diff_lines(tl_lines) + [""]
+        else:
+            report_lines += ["+ (none)", ""]
+        if tl_skipped:
+            report_lines += ["### Timeline (skipped duplicates)", ""] + tl_skipped + [""]
+        report_lines += ["## Characters updated", ""]
         if char_blocks:
-            report_lines += ["### Characters", ""]
             for name, lines in char_blocks:
+                report_lines += [f"### {name}", ""]
+                report_lines += ["#### Facts added", ""] + _as_diff_lines(lines) + [""]
+                questions = char_questions.get(name, [])
+                if questions:
+                    report_lines += ["#### Open questions", ""]
+                    report_lines += [f"+ {q}" for q in questions] + [""]
+        else:
+            report_lines += ["+ (none)", ""]
+        if char_skipped:
+            report_lines += ["### Characters (skipped duplicates)", ""]
+            for name, lines in char_skipped.items():
                 report_lines += [f"#### {name}", ""] + lines + [""]
+        report_lines += [
+            "## Notes",
+            "- Evidence sources (when shown in proposals) use `file:Lx-Ly` line references to the input.",
+            "- This report lists only additions; removals are not tracked yet.",
+            "",
+        ]
 
         (approved_dir / "APPROVAL_REPORT.md").write_text(
             "\n".join(report_lines), encoding="utf-8"
@@ -496,6 +555,7 @@ def approve_proposals_run(
     return ApprovalResult(
         run_id=run_id,
         approved_dir=approved_dir,
+        report_path=(approved_dir / "APPROVAL_REPORT.md"),
         world_facts_added=len(world_lines),
         timeline_events_added=len(tl_lines),
         characters_touched=chars_touched,
@@ -536,4 +596,3 @@ def approve_run_to_canon(project_dir: str, run_id: str, dry_run: bool = False, a
         "Expected one of: approve_proposals_run, approve_proposals, approve_to_canon, approve_run, approve. "
         f"Callables available: {available}"
     )
-
